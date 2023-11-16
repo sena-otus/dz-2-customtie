@@ -1,32 +1,69 @@
 #include <string>
-#include <tuple>
 #include <cassert>
+#include <utility>
+#include <iostream>
+
+template <typename... Args>
+struct Customtuple;
+
+template<typename First, typename... Tail>
+struct Customtuple<First, Tail...>
+{
+  explicit Customtuple(First&& first, Tail&&... tail)
+    : m_first(std::forward<First>(first)), m_tail(std::forward<Tail>(tail)...)
+  {
+  }
+
+  using noref_Customtuple = Customtuple<typename std::remove_reference<First>::type, typename std::remove_reference<Tail>::type...>;
+  using ref_Customtuple = Customtuple<First&, Tail&...>;
+  friend ref_Customtuple;
+
+  Customtuple&operator=(const noref_Customtuple& other)
+  {
+    m_first = other.m_first;
+    m_tail = other.m_tail;
+    return *this;
+  }
+
+private:
+  First m_first;
+  Customtuple<Tail...> m_tail;
+};
+
+
+template <>
+struct Customtuple<>
+{
+// NOLINTNEXTLINE(hicpp-named-parameter,readability-named-parameter)
+  void print(int = 0) const {}
+};
+
+template<class... Types>
+Customtuple<Types...> make_Customtuple(Types... args)
+{
+  return Customtuple<Types...>(std::forward<Types>(args)...);
+}
+
 
 auto getPerson() {
   const std::string name = "Petia";
   const std::string secondName = "Ivanoff";
   const std::size_t age = 23;
   const std::string department = "Sale";
-  return std::make_tuple(
+  return make_Customtuple(
     name, secondName, age, department
                          );
 }
 
 
-    // that works:
-template<typename... Args>
-std::tuple<Args&...> customtie1(Args&... args) noexcept
+template<typename... Types>
+Customtuple<Types&...> customtie(Types&... args) noexcept
 {
-  return std::tuple<Args&...>(args...);
+  return make_Customtuple<Types&...>(args...);
+    // to use {} explicit must be removed...
+    // return {args...};
 }
 
-
-  // that works too:
-template<typename... Args>
-std::tuple<Args&...> customtie2(Args&... args) noexcept
-{
-  return {args...};
-}
 
 // NOLINTNEXTLINE(hicpp-named-parameter,readability-named-parameter)
 int main(int, char *[]) {
@@ -34,17 +71,7 @@ int main(int, char *[]) {
   std::string secondName;
   std::string department;
   std::size_t age{0};
-  customtie1(name, secondName, age, department) = getPerson();
-  assert(name == "Petia");
-  assert(secondName == "Ivanoff");
-  assert(age == 23);
-  assert(department == "Sale");
-
-  name.clear();
-  secondName.clear();
-  department.clear();
-  age = 0;
-  customtie2(name, secondName, age, department) = getPerson();
+  customtie(name, secondName, age, department) = getPerson();
   assert(name == "Petia");
   assert(secondName == "Ivanoff");
   assert(age == 23);
