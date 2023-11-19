@@ -34,8 +34,6 @@ private:
 template <>
 struct Customtuple<>
 {
-// NOLINTNEXTLINE(hicpp-named-parameter,readability-named-parameter)
-  void print(int = 0) const {}
 };
 
 template<class... Types>
@@ -59,9 +57,10 @@ auto getPerson() {
 template<typename... Types>
 Customtuple<Types&...> customtie(Types&... args) noexcept
 {
-  return make_Customtuple<Types&...>(args...);
-    // to use {} explicit must be removed...
-    // return {args...};
+   return make_Customtuple<Types&...>(args...);
+
+     // for the next line to complile, explicit from Customtuple ctor must be removed, so what is less evil?
+     // return {args...};
 }
 
 
