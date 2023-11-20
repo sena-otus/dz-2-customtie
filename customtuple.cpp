@@ -9,14 +9,19 @@ struct Customtuple;
 template<typename First, typename... Tail>
 struct Customtuple<First, Tail...>
 {
+    /** Tuple type with const and reference removed from members,
+     * it works also with std::remove_reference<T> instead of std::decay<T>,
+     * so not really sure, which one to use here */
+  using noref_Customtuple = Customtuple<typename std::decay<First>::type, typename std::decay<Tail>::type...>;
+
+    /** use recursion to initialize values */
   explicit Customtuple(First&& first, Tail&&... tail)
     : m_first(std::forward<First>(first)), m_tail(std::forward<Tail>(tail)...)
   {
   }
 
-  using noref_Customtuple = Customtuple<typename std::remove_reference<First>::type, typename std::remove_reference<Tail>::type...>;
-  using ref_Customtuple = Customtuple<First&, Tail&...>;
-  friend ref_Customtuple;
+    /** following is not necessary, but may be useful for other cases */
+  explicit Customtuple(const noref_Customtuple& other): m_first(other.m_first), m_tail(other.m_tail)  {  }
 
   Customtuple&operator=(const noref_Customtuple& other)
   {
@@ -24,6 +29,11 @@ struct Customtuple<First, Tail...>
     m_tail = other.m_tail;
     return *this;
   }
+
+    /** Opposite of noref_Customtuple, tuple type with added reference to each member
+     * need that to allow operator=() to access members of noref_Customtuple */
+  using ref_Customtuple = Customtuple<First&, Tail&...>;
+  friend ref_Customtuple;
 
 private:
   First m_first;
@@ -36,6 +46,8 @@ struct Customtuple<>
 {
 };
 
+
+/** pass parameters by value */
 template<class... Types>
 Customtuple<Types...> make_Customtuple(Types... args)
 {
@@ -57,7 +69,7 @@ auto getPerson() {
 template<typename... Types>
 Customtuple<Types&...> customtie(Types&... args) noexcept
 {
-   return make_Customtuple<Types&...>(args...);
+  return Customtuple<Types&...>(args...);
 
      // for the next line to complile, explicit from Customtuple ctor must be removed, so what is less evil?
      // return {args...};
